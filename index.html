@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>中国神话人物知识图谱 · 神谱万象</title>
+<script src="./vendor/g6.min.js"></script>
+<script src="./data.js"></script>
+<style>
+  :root{
+    --zhu    : #b23a2e;
+    --liu    : #c59a3c;
+    --dai    : #2e3a4e;
+    --mo     : #14110d;
+    --yuebai : #f4efe4;
+    --xuan   : #d8cfba;
+    --panel  : rgba(20,17,13,.90);
+    --panel-bd: rgba(197,154,60,.45);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; overflow:hidden; }
+  body{
+    font-family:"KaiTi","楷体","STKaiti","Songti SC","Noto Serif SC","思源宋体","SimSun",serif;
+    background: radial-gradient(140% 120% at 50% 6%, #2a231a 0%, #17120d 52%, #0b0806 100%);
+    color:var(--yuebai); -webkit-font-smoothing:antialiased; user-select:none;
+  }
+  .bg{ position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .mist{ position:absolute; border-radius:50%; filter:blur(70px); opacity:.5; animation:drift 46s ease-in-out infinite alternate; }
+  .m1{ width:55vmax; height:55vmax; left:-12vmax; top:-14vmax; background:radial-gradient(circle,rgba(90,70,50,.38),transparent 68%); }
+  .m2{ width:48vmax; height:48vmax; right:-14vmax; bottom:-12vmax; background:radial-gradient(circle,rgba(60,70,95,.32),transparent 66%); animation-delay:-14s; }
+  .m3{ width:42vmax; height:42vmax; left:36%; top:42%; background:radial-gradient(circle,rgba(110,80,110,.22),transparent 66%); animation-delay:-26s; }
+  @keyframes drift{ 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(6vmax,3vmax) scale(1.12)} }
+  .grain{ position:fixed; inset:0; pointer-events:none; z-index:1; mix-blend-mode:overlay; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  header{ position:absolute; top:0; left:0; right:0; z-index:20; text-align:center; padding:16px 16px 8px; pointer-events:none; }
+  header .kicker{ font-size:11px; letter-spacing:.55em; color:var(--liu); opacity:.85; }
+  header h1{ font-size:31px; font-weight:600; letter-spacing:.14em; color:var(--yuebai); text-shadow:0 0 22px rgba(197,154,60,.35); }
+  header h1 .seal{ display:inline-block; margin-left:12px; font-size:12px; letter-spacing:.05em; color:#fff; background:var(--zhu); padding:3px 8px; border-radius:3px; vertical-align:middle; box-shadow:0 0 0 2px rgba(178,58,46,.3); transform:rotate(-4deg); }
+  header .sub{ margin-top:3px; font-size:12px; color:var(--xuan); opacity:.7; letter-spacing:.22em; }
+
+  .panel{ position:absolute; z-index:15; top:112px; left:14px; width:264px; max-height:calc(100vh - 150px); overflow-y:auto;
+    background:var(--panel); border:1px solid var(--panel-bd); border-radius:10px; padding:13px 13px 15px;
+    backdrop-filter:blur(8px); box-shadow:0 12px 40px rgba(0,0,0,.5); }
+  .panel::-webkit-scrollbar{ width:6px; } .panel::-webkit-scrollbar-thumb{ background:rgba(197,154,60,.35); border-radius:3px; }
+  .panel h2{ font-size:13px; letter-spacing:.28em; color:var(--liu); font-weight:600; padding-bottom:8px; margin-bottom:10px; border-bottom:1px solid rgba(197,154,60,.28); }
+  .group{ margin-bottom:11px; }
+  .group > label{ display:block; font-size:12px; letter-spacing:.16em; color:var(--xuan); opacity:.85; margin-bottom:6px; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-family:inherit; font-size:11.5px; letter-spacing:.05em; cursor:pointer; padding:4px 10px; border-radius:14px;
+    border:1px solid rgba(232,220,195,.22); background:rgba(232,220,195,.05); color:var(--xuan); transition:all .18s; }
+  .chip:hover{ border-color:var(--liu); color:var(--liu); }
+  .chip.on{ background:var(--zhu); border-color:var(--zhu); color:#fff; }
+  .chip .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  input.sbox{ width:100%; font-family:inherit; font-size:13px; color:var(--yuebai); background:rgba(232,220,195,.06);
+    border:1px solid rgba(232,220,195,.22); border-radius:8px; padding:8px 10px; outline:none; letter-spacing:.04em; }
+  input.sbox::placeholder{ color:rgba(232,220,195,.4); } input.sbox:focus{ border-color:var(--liu); }
+  .search-res{ font-size:11px; color:var(--liu); margin-top:4px; min-height:14px; }
+  .nhood{ display:flex; gap:6px; align-items:center; }
+  .nhood select{ font-family:inherit; font-size:12px; color:var(--yuebai); background:rgba(232,220,195,.06);
+    border:1px solid rgba(232,220,195,.22); border-radius:6px; padding:4px 6px; }
+  .btn{ font-family:inherit; font-size:12px; letter-spacing:.08em; cursor:pointer; padding:5px 12px; border-radius:7px;
+    border:1px solid var(--panel-bd); background:rgba(197,154,60,.12); color:var(--liu); transition:all .18s; }
+  .btn:hover{ background:var(--zhu); color:#fff; border-color:var(--zhu); }
+  .btn.danger:hover{ background:#8c1f1f; border-color:#8c1f1f; }
+  .stat{ font-size:11px; color:var(--xuan); opacity:.75; letter-spacing:.1em; margin-top:8px; line-height:1.7; }
+  .stat b{ color:var(--liu); }
+
+  .card{ position:absolute; z-index:25; width:300px; max-height:64vh; overflow-y:auto; background:var(--panel);
+    border:1px solid var(--panel-bd); border-radius:10px; padding:14px 16px; box-shadow:0 16px 50px rgba(0,0,0,.6);
+    display:none; backdrop-filter:blur(8px); pointer-events:auto; }
+  .card::-webkit-scrollbar{ width:5px; } .card::-webkit-scrollbar-thumb{ background:rgba(197,154,60,.35); border-radius:3px; }
+  .card .nm{ font-size:19px; color:var(--liu); letter-spacing:.06em; }
+  .card .tags{ margin:8px 0; display:flex; flex-wrap:wrap; gap:6px; }
+  .card .tag{ font-size:11px; letter-spacing:.05em; padding:2px 8px; border-radius:4px; border:1px solid rgba(232,220,195,.2); color:var(--xuan); }
+  .card .desc{ font-size:13px; line-height:1.75; color:var(--yuebai); opacity:.93; }
+  .card .ali{ font-size:11.5px; color:var(--xuan); opacity:.7; margin-top:8px; }
+  .card h3{ font-size:12px; letter-spacing:.18em; color:var(--liu); margin:12px 0 6px; }
+  .card ul.rels{ list-style:none; }
+  .card li.rel{ font-size:12px; line-height:1.6; padding:4px 0; border-bottom:1px dashed rgba(232,220,195,.1); color:var(--xuan); }
+  .card li.rel b{ color:var(--yuebai); font-weight:600; }
+  .card li.rel .rt{ font-size:10.5px; color:#fff; padding:1px 6px; border-radius:4px; margin-right:6px; }
+
+  .hint{ position:absolute; z-index:14; bottom:14px; left:16px; font-size:11px; color:var(--xuan); opacity:.6;
+    letter-spacing:.1em; line-height:1.7; pointer-events:none; }
+  .zoomctl{ position:absolute; z-index:14; right:14px; bottom:14px; display:flex; flex-direction:column; gap:8px; }
+  .zbtn{ width:36px; height:36px; border-radius:8px; border:1px solid var(--panel-bd); background:var(--panel);
+    color:var(--liu); font-size:18px; cursor:pointer; line-height:1; font-family:inherit; }
+  .zbtn:hover{ background:var(--zhu); color:#fff; }
+  #canvas{ position:absolute; inset:0; z-index:5; }
+  @media (max-width:760px){ .panel{ width:218px; left:6px; top:92px; padding:10px; } header h1{ font-size:23px; } .card{ width:250px; } }
+</style>
+</head>
+<body>
+  <div class="bg"><div class="mist m1"></div><div class="mist m2"></div><div class="mist m3"></div></div>
+  <div class="grain"></div>
+
+  <header>
+    <div class="kicker">中 华 神 谱</div>
+    <h1>中国神话人物知识图谱<span class="seal">万象</span></h1>
+    <div class="sub">开天辟地 · 封神演义 · 西游取经 · 道庭佛国 · 源远流长</div>
+  </header>
+
+  <aside class="panel" id="panel">
+    <h2>⊙ 筛选 · 检索</h2>
+    <div class="group"><label>神 系</label><div class="chip-row" id="catFilters"></div></div>
+    <div class="group"><label>关 系 类 型</label><div class="chip-row" id="typePanel"></div></div>
+    <div class="group"><label>搜 索 · 名 / 别名</label>
+      <input type="search" class="sbox" id="searchBox" placeholder="如：孙悟空 / 观音 / 大圣" autocomplete="off" />
+      <div class="search-res" id="searchRes"></div>
+    </div>
+    <div class="group"><label>邻 居 深 度</label>
+      <div class="nhood">
+        <select id="nDegree">
+          <option value="0">关闭</option>
+          <option value="1">1 度</option>
+          <option value="2" selected>2 度</option>
+          <option value="3">3 度</option>
+        </select>
+        <button class="btn danger" id="clearFocus">清除高亮</button>
+      </div>
+    </div>
+    <div class="stat" id="statLine"></div>
+  </aside>
+
+  <div class="card" id="card"></div>
+  <div class="hint" id="hint">滚轮缩放 · 空白处拖拽平移 · 悬停查看简介<br/>点选节点聚焦并高亮 N 度邻居 · 点空白处复位</div>
+  <div class="zoomctl">
+    <button class="zbtn" id="zoomin" title="放大">＋</button>
+    <button class="zbtn" id="zoomout" title="缩小">－</button>
+    <button class="zbtn" id="zoomfit" title="复位">⤢</button>
+  </div>
+  <div id="canvas"></div>
+
+<script>
+(function(){
+  "use strict";
+  const DATA = window.SHENHUA_DATA;
+  const fail = (m)=>{ document.getElementById('canvas').innerHTML =
+    '<div style="color:#c33;padding:48px;font-size:16px;line-height:2">'+m+'</div>'; };
+  if(!DATA){ fail('未找到数据（data.js 缺失）。请确认与 index.html 同目录存在 data.js。'); return; }
+  const { meta, nodes, edges } = DATA;
+  if(!window.G6){ fail('未找到 G6（vendor/g6.min.js 缺失）。请确认 vendor 目录存在 g6.min.js。'); return; }
+  const G = window.G6;
+
+  /* ============ 索引 ============ */
+  const nById = new Map(); nodes.forEach(n => nById.set(n.id, n));
+  const adj = new Map();   nodes.forEach(n => adj.set(n.id, []));
+  edges.forEach(e => { if(adj.has(e.source)) adj.get(e.source).push(e); if(adj.has(e.target)) adj.get(e.target).push(e); });
+  const aliasIndex = new Map();
+  nodes.forEach(n => { [n.name, ...(n.aliases||[])].forEach(k => {
+    const kk = k.toLowerCase();
+    if(!aliasIndex.has(kk)) aliasIndex.set(kk, []);
+    aliasIndex.get(kk).push(n.id); }); });
+
+  /* ============ 状态 ============ */
+  const state = { cats:new Set(Object.keys(meta.categories)), types:new Set(Object.keys(meta.edgeTypes)), focusId:null, degree:2 };
+  const container = document.getElementById('canvas');
+
+  /* ============ 标签 LOD（性能关键：初始只显核心神祇标签，缩放按需展开）============ */
+  let labelLevel = 1;                 // 显示 label 的最大 level（level<=labelLevel 显示）
+  const focusLabels = new Set();      // 聚焦时强制显示标签的节点
+  function labelVisible(n){ return n.level <= labelLevel || focusLabels.has(n.id); }
+  function refreshLabels(){
+    graph.updateNodeData(nodes.map(n=>({ id:n.id, style:{ labelText: labelVisible(n)? n.name : '' } })));
+  }
+  function zoomLOD(){
+    const z = graph.getZoom();
+    const lv = z < 0.5 ? 1 : z < 1.1 ? 2 : z < 1.8 ? 3 : 5;
+    if(lv !== labelLevel){ labelLevel = lv; refreshLabels(); }
+  }
+  let lodTimer = null;
+
+  /* ============ 样式映射 ============ */
+  const catColor = {}; for(const k in meta.categories) catColor[k] = meta.categories[k].color;
+  function shade(hex,f){ const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); if(!m) return hex;
+    let r=Math.round(parseInt(m[1],16)*f), g=Math.round(parseInt(m[2],16)*f), b=Math.round(parseInt(m[3],16)*f);
+    return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+  function nodeFill(n){
+    if(n.level===0) return '#e0b84e';
+    return shade(catColor[n.category]||'#999', 0.55 + (1-n.level/6)*0.45);
+  }
+  const SHAPE = meta.shapeMap || { creator:'star', god:'circle', xian:'diamond', yao:'triangle', ren:'rect' };
+  function nodeType(n){ return SHAPE[n.shape] || 'circle'; }
+  function nodeSize(n){ return [26,19,13,10.5,8.5,11][n.level] ?? 11; }
+  function edgeMeta(e){ return meta.edgeTypes[e.type] || { color:'#999', line:'solid', name:e.type }; }
+
+  /* ============ G6 图 ============ */
+  const graph = new G.Graph({
+    container,
+    width: container.clientWidth, height: container.clientHeight,
+    // 预计算静态坐标：不给 layout，节点位置直接读 data.x / data.y
+    data: { nodes, edges },
+    behaviors: ['drag-canvas','zoom-canvas','drag-element'],
+    zoomRange: [0.05, 6],
+    node: {
+      type: (d)=>nodeType(d),
+      style: {
+        x:(d)=>d.x, y:(d)=>d.y, size:(d)=>nodeSize(d),
+        fill:(d)=>nodeFill(d), stroke:'#0d0a08', lineWidth:1.2, fillOpacity:0.95,
+        labelText:(d)=>labelVisible(d)? d.name : '', labelFill:'#efe9db', labelFontSize:10, labelFontWeight:500,
+        labelFontFamily:'"KaiTi","楷体","STKaiti",serif', labelPlacement:'bottom', labelOffsetY:4, labelOpacity:0.85,
+      },
+      state: {
+        highlight:{ lineWidth:2.6, stroke:'#ffe08a', fillOpacity:1, labelOpacity:1 },
+        dim:{ opacity:0.1, labelOpacity:0.06 },
+      },
+    },
+    edge: {
+      type: 'line',
+      style: {
+        stroke:(d)=>edgeMeta(d).color, lineWidth:(d)=>(d.type==='subordinate'||d.type==='sequence'?0.6:1.1),
+        opacity:0.5, lineDash:(d)=>edgeMeta(d).line==='dashed'?[6,4]:edgeMeta(d).line==='dotted'?[2,3]:undefined,
+        endArrow:true, endArrowSize:7,
+      },
+      state: { highlight:{ opacity:0.95, lineWidth:2.2, stroke:'#ffd77a' }, dim:{ opacity:0.05 } },
+    },
+  });
+  graph.render().then(()=>{ graph.fitView(); zoomLOD(); });
+
+  /* ============ 详情浮窗 ============ */
+  const card = document.getElementById('card');
+  function showCard(id, clientXY){
+    const n = nById.get(id); if(!n) return;
+    const c = meta.categories[n.category];
+    const rels = (adj.get(id)||[]).slice(0,20);
+    let html = `<div class="nm">${n.name}</div><div class="tags">`;
+    html += `<span class="tag" style="border-color:${c.color};color:${c.color}">${c.name}</span>`;
+    html += `<span class="tag">${meta.levels[n.level]||''}</span>`;
+    html += `</div><div class="desc">${n.desc||''}</div>`;
+    if(n.aliases && n.aliases.length) html += `<div class="ali">别名：${n.aliases.join('、')}</div>`;
+    html += `<h3>关系（${(adj.get(id)||[]).length}）</h3><ul class="rels">`;
+    rels.forEach(e=>{
+      const otherId = e.source===id?e.target:e.source; const other = nById.get(otherId); if(!other) return;
+      const t = edgeMeta(e); const dir = e.source===id?'→':'←';
+      html += `<li class="rel"><span class="rt" style="background:${t.color}">${t.name}</span><b>${dir} ${other.name}</b>` +
+        (e.desc? `　<span style="opacity:.6">${e.desc}</span>`:'') + `</li>`;
+    });
+    if((adj.get(id)||[]).length>20) html += `<li class="rel" style="border:none;opacity:.6">… 另有 ${adj.get(id).length-20} 条关系</li>`;
+    html += `</ul>`;
+    card.innerHTML = html;
+    let x = (clientXY? clientXY[0]:320)+14, y = (clientXY? clientXY[1]:140)+14;
+    if(x+310 > container.clientWidth) x -= 324;
+    if(y+340 > container.clientHeight) y = Math.max(8, container.clientHeight-360);
+    card.style.left = Math.max(8,Math.min(x,container.clientWidth-310))+'px';
+    card.style.top  = Math.max(8,Math.min(y,container.clientHeight-40))+'px';
+    card.style.display = 'block';
+  }
+
+  /* ============ N 度邻居 ============ */
+  function neighborhood(id, deg){
+    const seen = new Set([id]); let frontier = new Set([id]);
+    for(let d=0; d<deg; d++){
+      const next = new Set();
+      frontier.forEach(fid => (adj.get(fid)||[]).forEach(e=>{
+        const o = e.source===fid?e.target:e.source; if(!seen.has(o)){ seen.add(o); next.add(o); }
+      }));
+      frontier = next; if(frontier.size===0) break;
+    }
+    const edgeSel = new Set();
+    edges.forEach(e=>{ if(seen.has(e.source)&&seen.has(e.target)) edgeSel.add(e.id); });
+    return { nodes:seen, edges:edgeSel };
+  }
+  function applyFocus(id){
+    state.focusId = id;
+    const deg = state.degree;
+    let nb = null;
+    // 清空强制标签，聚焦场景重建
+    focusLabels.clear();
+    if(id && deg>0){
+      nb = neighborhood(id, deg);
+      nodes.forEach(n=>{
+        const st = nb.nodes.has(n.id)? ['highlight'] : ['dim'];
+        if(st[0]==='highlight') focusLabels.add(n.id);
+        graph.setElementState(n.id, st);
+      });
+      edges.forEach(e=>graph.setElementState(e.id, nb.edges.has(e.id)? ['highlight'] : ['dim']));
+    } else if(id){
+      focusLabels.add(id);
+      nodes.forEach(n=>graph.setElementState(n.id, n.id===id? ['highlight'] : ['dim']));
+      edges.forEach(e=>graph.setElementState(e.id, ['dim']));
+    } else {
+      clearStates();
+    }
+    // 聚焦时强制刷新标签，让邻居可见
+    if(id) refreshLabels(); else refreshLabels();
+  }
+  function clearStates(){
+    const nodeIds = nodes.map(n=>n.id), edgeIds = edges.map(e=>e.id);
+    graph.setElementState(Object.fromEntries(nodeIds.map(id=>[id,[]])));
+    graph.setElementState(Object.fromEntries(edgeIds.map(id=>[id,[]])));
+  }
+
+  /* ============ 筛选（setData 过滤子集，保持布局）============ */
+  function applyFilters(){
+    const show = new Set(nodes.filter(n=>state.cats.has(n.category)).map(n=>n.id));
+    const vn = nodes.filter(n=>show.has(n.id));
+    const ve = edges.filter(e=>state.types.has(e.type) && show.has(e.source) && show.has(e.target));
+    graph.setData({ nodes: vn, edges: ve });
+    updateStats();
+    if(state.focusId && nById.has(state.focusId)) applyFocus(state.focusId);
+  }
+  function updateStats(){
+    const show = new Set([...state.cats]);
+    const vn = nodes.filter(n=>state.cats.has(n.category)).length;
+    const ve = edges.filter(e=>state.types.has(e.type) && state.cats.has(catOf(e.source)) && state.cats.has(catOf(e.target))).length;
+    document.getElementById('statLine').innerHTML =
+      `节点 <b>${nodes.length}</b> · 边 <b>${edges.length}</b> · 关系 <b>${Object.keys(meta.edgeTypes).length}</b> 类<br/>当前可见：节点 ${vn} · 边 ${ve}`;
+  }
+  function catOf(id){ const n=nById.get(id); return n?n.category:null; }
+
+  /* ============ 搜索 ============ */
+  const searchBox = document.getElementById('searchBox'), searchRes = document.getElementById('searchRes');
+  searchBox.addEventListener('input', ()=>{
+    const q = searchBox.value.trim().toLowerCase();
+    if(!q){ searchRes.textContent=''; return; }
+    const hits = []; for(const [k,ids] of aliasIndex){ if(k.includes(q)) hits.push(...ids); }
+    const uniq = [...new Set(hits)].slice(0,12);
+    searchRes.textContent = `匹配 ${uniq.length} 条` + (uniq.length? '：'+uniq.map(id=>nById.get(id).name).join('、'):'');
+    if(uniq.length) focusNode(uniq[0]);
+  });
+  function focusNode(id){
+    graph.focusElement(id, { duration:400 });
+    applyFocus(id);
+    showCard(id, [300,130]);
+  }
+
+  /* ============ 事件 ============ */
+  graph.on('node:pointermove', (evt)=>{ showCard(evt.target.id, [evt.client.x, evt.client.y]); });
+  graph.on('node:pointerleave', ()=>{ card.style.display='none'; });
+  graph.on('node:click', (evt)=>{ applyFocus(evt.target.id); showCard(evt.target.id, [evt.client.x, evt.client.y]); });
+  graph.on('canvas:click', ()=>{ state.focusId=null; applyFocus(null); card.style.display='none'; });
+
+  /* ============ 控件 ============ */
+  const catBox = document.getElementById('catFilters');
+  for(const k in meta.categories){
+    const c = meta.categories[k];
+    const el = document.createElement('span'); el.className='chip on'; el.dataset.cat=k;
+    el.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.name}`;
+    el.addEventListener('click', ()=>{
+      state.cats.has(k)? state.cats.delete(k) : state.cats.add(k);
+      el.classList.toggle('on', state.cats.has(k)); applyFilters();
+    });
+    catBox.appendChild(el);
+  }
+
+  const typeBox = document.getElementById('typePanel');
+  const btnAll = document.createElement('span'); btnAll.className='chip on'; btnAll.textContent='全选';
+  btnAll.addEventListener('click', ()=>{
+    const all = state.types.size === Object.keys(meta.edgeTypes).length;
+    state.types = all? new Set() : new Set(Object.keys(meta.edgeTypes));
+    refreshTypes(); applyFilters();
+  });
+  function refreshTypes(){
+    [...typeBox.querySelectorAll('.chip:not([data-all])')].forEach(c=>c.remove());
+    for(const k in meta.edgeTypes){
+      const t = meta.edgeTypes[k];
+      const el = document.createElement('span'); el.className='chip'+(state.types.has(k)?' on':'');
+      el.style.borderColor = t.color; el.textContent = t.name; el.title = t.desc;
+      el.addEventListener('click', ()=>{ state.types.has(k)? state.types.delete(k):state.types.add(k); el.classList.toggle('on'); btnAll.classList.toggle('on', state.types.size===Object.keys(meta.edgeTypes).length); applyFilters(); });
+      typeBox.appendChild(el);
+    }
+    btnAll.classList.toggle('on', state.types.size===Object.keys(meta.edgeTypes).length);
+  }
+  typeBox.appendChild(btnAll); refreshTypes();
+
+  document.getElementById('nDegree').addEventListener('change', e=>{ state.degree = parseInt(e.target.value,10); if(state.focusId) applyFocus(state.focusId); });
+  document.getElementById('clearFocus').addEventListener('click', ()=>{ state.focusId=null; applyFocus(null); card.style.display='none'; });
+  document.getElementById('zoomin').addEventListener('click', ()=>{ graph.zoomBy(1.3); zoomLOD(); });
+  document.getElementById('zoomout').addEventListener('click', ()=>{ graph.zoomBy(1/1.3); zoomLOD(); });
+  document.getElementById('zoomfit').addEventListener('click', ()=>{ state.focusId=null; applyFocus(null); card.style.display='none'; graph.fitView().then(zoomLOD); });
+
+  // 滚轮缩放后触发 LOD（节流）
+  container.addEventListener('wheel', ()=>{ if(lodTimer) clearTimeout(lodTimer); lodTimer = setTimeout(zoomLOD, 150); }, { passive:true });
+
+  window.addEventListener('resize', ()=>{ graph.setSize(container.clientWidth, container.clientHeight); });
+
+  updateStats();
+  window.__graph = graph; window.__focus = focusNode;
+})();
+</script>
+</body>
+</html>
